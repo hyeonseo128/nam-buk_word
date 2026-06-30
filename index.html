@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>남북 어휘 플래시카드</title>
+<style>
+  :root{
+    --paper:#f0ece1;
+    --ink:#22281f;
+    --south:#2b5d6b;   /* 남측 - 청록 계열 */
+    --north:#8a3a2c;   /* 북측 - 벽돌색 계열 */
+    --line:#cdc4ac;
+    --gold:#b8923f;
+    --card:#fbf9f3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Noto Serif KR','Batang',serif;
+    background:var(--paper);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  h1{
+    font-size:22px;
+    letter-spacing:2px;
+    margin:4px 0 2px;
+    font-weight:700;
+  }
+  .sub{
+    font-size:12px;
+    color:#6b6253;
+    margin-bottom:18px;
+    letter-spacing:1px;
+  }
+  .boxes{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .box-pill{
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:5px 12px;
+    font-size:12px;
+    background:var(--card);
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .box-pill b{font-size:13px;}
+  .box-pill.clickable{
+    cursor:pointer;
+    transition:border-color .15s ease, transform .1s ease;
+  }
+  .box-pill.clickable:hover{
+    border-color:var(--gold);
+  }
+  .box-pill.clickable:active{
+    transform:scale(0.97);
+  }
+  .box-pill.active{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+  .stage-bar{
+    width:100%;
+    max-width:420px;
+    height:4px;
+    background:var(--line);
+    border-radius:2px;
+    overflow:hidden;
+    margin-bottom:24px;
+  }
+  .stage-fill{
+    height:100%;
+    background:var(--gold);
+    width:0%;
+    transition:width .3s ease;
+  }
+  .stage-label{
+    font-size:11px;
+    color:#8a8270;
+    margin-top:-18px;
+    margin-bottom:14px;
+  }
+  .score-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:24px;
+    font-size:13px;
+  }
+  .score-pill{
+    padding:4px 12px;
+    border-radius:20px;
+    font-weight:700;
+  }
+  .score-pill.known{
+    background:#e3ecdf;
+    color:#3a6b48;
+  }
+  .score-pill.unknown{
+    background:#f3e0dc;
+    color:#a13f3f;
+  }
+  .card-wrap{
+    width:100%;
+    max-width:420px;
+    perspective:1200px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    min-height:230px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:30px 20px;
+    position:relative;
+    box-shadow:0 2px 0 var(--line), 0 8px 20px rgba(0,0,0,.06);
+    cursor:pointer;
+  }
+  .dir-tag{
+    position:absolute;
+    top:14px;
+    left:14px;
+    font-size:11px;
+    letter-spacing:1px;
+    padding:3px 9px;
+    border-radius:10px;
+    color:#fff;
+  }
+  .dir-tag.s2n{background:var(--south);}
+  .dir-tag.n2s{background:var(--north);}
+  .box-tag{
+    position:absolute;
+    top:14px;
+    right:14px;
+    font-size:11px;
+    color:#9a9180;
+  }
+  .prompt-label{
+    font-size:12px;
+    color:#9a9180;
+    margin-bottom:10px;
+    letter-spacing:1px;
+  }
+  .word{
+    font-size:32px;
+    font-weight:900;
+    text-align:center;
+    line-height:1.3;
+  }
+  .answer{
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px dashed var(--line);
+    width:100%;
+    text-align:center;
+  }
+  .answer .word{font-size:28px;color:var(--gold);}
+  .hint{
+    font-size:12px;
+    color:#9a9180;
+    margin-top:14px;
+  }
+  .controls{
+    width:100%;
+    max-width:420px;
+    margin-top:20px;
+  }
+  .grade-row{
+    display:flex;
+    gap:8px;
+  }
+  .grade-row button{
+    flex:1;
+    padding:13px 4px;
+    border-radius:10px;
+    border:none;
+    font-family:inherit;
+    font-size:13px;
+    cursor:pointer;
+    color:#fff;
+    letter-spacing:0.5px;
+  }
+  .grade-fail{background:#a13f3f;}
+  .grade-hard{background:#b8923f;}
+  .grade-ok{background:#4c7a5b;}
+  .reveal-btn{
+    width:100%;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--ink);
+    background:transparent;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:14px;
+    cursor:pointer;
+    letter-spacing:1px;
+  }
+  .reveal-btn:hover{background:var(--ink); color:var(--paper);}
+  .footer-row{
+    display:flex;
+    justify-content:space-between;
+    width:100%;
+    max-width:420px;
+    margin-top:14px;
+    font-size:12px;
+    color:#9a9180;
+  }
+  .reset-link{
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .done-screen{
+    text-align:center;
+    max-width:420px;
+  }
+  .done-screen .big{
+    font-size:20px;
+    margin-bottom:10px;
+  }
+  .restart-btn{
+    margin-top:18px;
+    padding:12px 24px;
+    border-radius:10px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    font-family:inherit;
+    cursor:pointer;
+    font-size:14px;
+  }
+</style>
+</head>
+<body>
+
+<h1>남북 어휘 카드</h1>
+<div class="sub">라이트너 5단계 · 양방향 무작위 출제</div>
+
+<div class="boxes" id="boxSummary"></div>
+<div class="stage-bar"><div class="stage-fill" id="stageFill"></div></div>
+<div class="stage-label" id="stageLabel">이번 회차: 0 / 0</div>
+<div class="score-row" id="scoreRow"></div>
+
+<div id="main"></div>
+
+<script>
+const VOCAB = [
+  ["맞꼭지각","맞문각"],
+  ["동위각","같은자리각"],
+  ["교차로","사귐길"],
+  ["터널","차굴"],
+  ["어린이집","탁아소"],
+  ["한의원","고려병원"],
+  ["덩크 슛","꽂아넣기"],
+  ["아이스크림","에스키모"],
+  ["와이퍼","비물닦개"],
+  ["대합실","기다림칸"],
+  ["노크","손기척"],
+  ["접영","나비헤염"],
+  ["빙수","단얼음"],
+  ["어묵","튀긴 고기떡"],
+];
+
+const BOX_LABELS = ["1단계","2단계","3단계","4단계","5단계(완료)"];
+const STORAGE_KEY = "nk_sk_vocab_leitner_v1";
+
+// 카드 생성: 각 단어쌍마다 두 방향(남->북, 북->남) = 카드 28장
+function buildCards(){
+  const cards = [];
+  VOCAB.forEach((pair,i)=>{
+    cards.push({id:i+"_s2n", pairIdx:i, dir:"s2n", q:pair[0], a:pair[1], box:0});
+    cards.push({id:i+"_n2s", pairIdx:i, dir:"n2s", q:pair[1], a:pair[0], box:0});
+  });
+  return cards;
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // 카드 수가 다르면(어휘 목록 변경) 새로 시작
+      if(parsed.cards && parsed.cards.length === VOCAB.length*2){
+        return parsed;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState() || { cards: buildCards() };
+let cards = state.cards;
+
+// 이번 회차(라운드) 큐: 박스에 상관없이 전체 카드를 셔플해서
+// 한 바퀴 돌 때까지 같은 카드가 다시 안 나오게 함.
+let roundQueue = [];
+let roundTotal = 0;
+let roundDone = 0;
+let current = null;
+let revealed = false;
+let sessionKnown = 0;
+let sessionUnknown = 0;
+let currentMode = "all"; // "all" 또는 0~4 (박스 번호)
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function cardsForMode(mode){
+  if(mode === "all") return cards;
+  return cards.filter(c => c.box === mode);
+}
+
+function startRound(mode){
+  if(mode === undefined) mode = currentMode;
+  currentMode = mode;
+  const pool = cardsForMode(mode);
+  if(pool.length === 0){
+    current = null;
+    roundQueue = [];
+    roundTotal = 0;
+    roundDone = 0;
+    sessionKnown = 0;
+    sessionUnknown = 0;
+    render();
+    return;
+  }
+  roundQueue = shuffle(pool.map(c=>c.id));
+  roundTotal = roundQueue.length;
+  roundDone = 0;
+  sessionKnown = 0;
+  sessionUnknown = 0;
+  nextCard();
+}
+
+function nextCard(){
+  revealed = false;
+  if(roundQueue.length === 0){
+    current = null;
+    render();
+    return;
+  }
+  const id = roundQueue.shift();
+  current = cards.find(c=>c.id===id);
+  render();
+}
+
+function grade(result){
+  // result: 'fail' | 'ok'
+  if(result === "fail"){
+    current.box = 0;
+    sessionUnknown++;
+  } else {
+    current.box = Math.min(4, current.box+1);
+    sessionKnown++;
+  }
+  saveState();
+  roundDone++;
+  nextCard();
+}
+
+function resetAll(){
+  if(!confirm("모든 학습 기록을 초기화할까요?")) return;
+  cards = buildCards();
+  state = {cards};
+  saveState();
+  startRound("all");
+}
+
+function renderBoxSummary(){
+  const counts = [0,0,0,0,0];
+  cards.forEach(c=>counts[c.box]++);
+  const el = document.getElementById("boxSummary");
+
+  let html = `<div class="box-pill clickable ${currentMode==='all'?'active':''}" onclick="startRound('all')">
+      전체 <b>${cards.length}</b>
+    </div>`;
+  for(let i=0;i<5;i++){
+    const disabled = counts[i]===0;
+    html += `<div class="box-pill ${disabled?'':'clickable'} ${currentMode===i?'active':''}"
+        ${disabled?'':`onclick="startRound(${i})"`}>
+        ${BOX_LABELS[i]} <b>${counts[i]}</b>
+      </div>`;
+  }
+  el.innerHTML = html;
+
+  const fillPct = roundTotal===0 ? 0 : Math.round((roundDone/roundTotal)*100);
+  document.getElementById("stageFill").style.width = fillPct+"%";
+  document.getElementById("stageLabel").textContent =
+    `이번 회차: ${roundDone} / ${roundTotal}`;
+
+  document.getElementById("scoreRow").innerHTML = `
+    <span class="score-pill known">아는 단어 ${sessionKnown}</span>
+    <span class="score-pill unknown">모르는 단어 ${sessionUnknown}</span>
+  `;
+}
+
+function render(){
+  renderBoxSummary();
+  const main = document.getElementById("main");
+
+  if(!current){
+    const isEmptyMode = roundTotal === 0;
+    main.innerHTML = `
+      <div class="done-screen">
+        <div class="big">${isEmptyMode ? (BOX_LABELS[currentMode]+'에 카드가 없어요') : '이번 회차를 모두 끝냈어요 🎉'}</div>
+        <div style="color:#9a9180; font-size:13px;">
+          ${isEmptyMode
+            ? '위에서 다른 단계를 눌러보세요.'
+            : '정답 평가에 따라 박스가 자동으로 조정되었습니다.<br>다시 한 바퀴 돌려볼까요?'}
+        </div>
+        ${isEmptyMode ? '' : `<button class="restart-btn" onclick="startRound(currentMode)">같은 범위로 다시</button>`}
+      </div>
+      <div class="footer-row">
+        <span></span>
+        <span class="reset-link" onclick="resetAll()">전체 기록 초기화</span>
+      </div>
+    `;
+    return;
+  }
+
+  const dirTagClass = current.dir === "s2n" ? "s2n" : "n2s";
+  const dirText = current.dir === "s2n" ? "남 → 북" : "북 → 남";
+  const promptLabel = current.dir === "s2n" ? "남한어" : "북한어";
+  const answerLabel = current.dir === "s2n" ? "북한어는?" : "남한어는?";
+
+  main.innerHTML = `
+    <div class="card-wrap">
+      <div class="card" id="cardEl" onclick="${revealed ? '' : 'doReveal()'}">
+        <span class="dir-tag ${dirTagClass}">${dirText}</span>
+        <span class="box-tag">${BOX_LABELS[current.box]}</span>
+        <div class="prompt-label">${promptLabel}</div>
+        <div class="word">${current.q}</div>
+        ${revealed ? `
+          <div class="answer">
+            <div class="prompt-label">${answerLabel}</div>
+            <div class="word">${current.a}</div>
+          </div>
+        ` : `<div class="hint">카드를 눌러 정답 확인</div>`}
+      </div>
+    </div>
+    <div class="controls">
+      ${revealed ? `
+        <div class="grade-row">
+          <button class="grade-fail" onclick="grade('fail')">몰랐음</button>
+          <button class="grade-ok" onclick="grade('ok')">맞춤</button>
+        </div>
+      ` : `
+        <button class="reveal-btn" onclick="doReveal()">정답 보기</button>
+      `}
+    </div>
+    <div class="footer-row">
+      <span>남은 카드 ${roundQueue.length}장</span>
+      <span class="reset-link" onclick="resetAll()">전체 기록 초기화</span>
+    </div>
+  `;
+}
+
+function doReveal(){
+  revealed = true;
+  render();
+}
+
+startRound("all");
+</script>
+</body>
+</html>
